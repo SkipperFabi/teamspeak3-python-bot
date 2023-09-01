@@ -366,6 +366,14 @@ class InformTeamAboutNewbie(Thread):
             )
             return
 
+        if client.client_uid == "ServerQuery":
+            InformTeamAboutNewbie.logger.debug(
+                "The client client_name=%s, client_database_id=%s is a ServerQuery. Ignoring.",
+                int(client.client_name),
+                int(client.client_dbid),
+            )
+            return
+
         client_servergroup_ids = self.get_servergroups_by_client(client.client_dbid)
 
         if self.newbie_servergroup.get("sgid") not in client_servergroup_ids:
