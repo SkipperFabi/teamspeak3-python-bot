@@ -8,7 +8,7 @@ Simple TeamSpeak bot based on the [ts3API](https://github.com/Murgeye/ts3API).
 
 Works with a TeamSpeak 3 (TS3) and TeamSpeak 5 (TS5; Beta) server.
 
-## Donations
+# Donations
 
 **TeamSpeak Bot** is free software and is made available free of charge. Your donation, which is purely optional, supports me at improving the software as well as reducing my costs of this project. If you like the software, please consider a donation. Thank you very much!
 
