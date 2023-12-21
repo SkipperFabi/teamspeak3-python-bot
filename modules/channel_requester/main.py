@@ -245,6 +245,41 @@ class ChannelRequester(Thread):
 
         return managed_channels_list
 
+    def find_channel_by_name(self, channel_name=None):
+        """
+        Find a channel with a specific name.
+        :param: channel_name: The name of the channel, which you want to search for.
+        :return: dict
+        :type: dict
+        """
+        if channel_name is None:
+            return None
+
+        try:
+            all_channels = self.ts3conn.channellist()
+        except TS3Exception:
+            ChannelRequester.logger.exception("Could not get the current channel list.")
+            raise
+
+        for channel in all_channels:
+            if channel.get("channel_name") == channel_name:
+                return channel
+
+        return None
+
+    def move_client_to_channel_id(self, client, channel_id):
+        """
+        Moves a client into a specific channel.
+        """
+        try:
+            self.ts3conn.clientmove(int(channel_id), int(client.clid))
+        except TS3QueryException:
+            ChannelRequester.logger.exception(
+                "Failed to move the client into his private channel: %s",
+                str(client),
+            )
+            raise
+
     def create_channel(self, client=None):
         """
         Creates a channel and grants a specific client channel admin permissions.
@@ -327,6 +362,17 @@ class ChannelRequester(Thread):
             str(client_info.get("client_nickname")),
             str(main_channel_name),
         )
+
+        existing_user_channel = self.find_channel_by_name(
+            str(client_info.get("client_nickname"))
+        )
+        if existing_user_channel is not None:
+            ChannelRequester.logger.info(
+                "client_nickname=%s has already an existing channel. Moving the client directly.",
+                str(client_info.get("client_nickname")),
+            )
+            self.move_client_to_channel_id(client, existing_user_channel.get("cid"))
+            return
 
         channel_properties = []
         channel_properties.append("channel_flag_semi_permanent=1")
@@ -449,16 +495,7 @@ class ChannelRequester(Thread):
                             )
                             raise
 
-            try:
-                self.ts3conn.clientmove(
-                    int(recently_created_channel.get("cid")), int(client.clid)
-                )
-            except TS3QueryException:
-                ChannelRequester.logger.exception(
-                    "Failed to move the client into his private channel: %s",
-                    str(client),
-                )
-                raise
+            self.move_client_to_channel_id(client, recently_created_channel.get("cid"))
 
             try:
                 self.ts3conn._send(
