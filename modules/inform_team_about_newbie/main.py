@@ -274,6 +274,13 @@ class InformTeamAboutNewbie(Thread):
 
         team_member_client_ids = []
         for client in client_list:
+            if int(client.get("client_type")) == 1:
+                self.logger.debug(
+                    "update_client_list ignoring ServerQuery client: %s",
+                    str(client),
+                )
+                continue
+
             if client.get("client_database_id") not in team_member_database_id_list:
                 InformTeamAboutNewbie.logger.debug(
                     "The following client is not member of any team servergroup: %s",
