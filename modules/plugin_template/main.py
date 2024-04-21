@@ -63,9 +63,9 @@ class PluginTemplate(Thread):
         """
         try:
             self.client_list = self.ts3conn.clientlist()
-            PluginTemplate.logger.debug("client_list: %s", str(self.client_list))
+            self.logger.debug("client_list: %s", str(self.client_list))
         except TS3Exception:
-            PluginTemplate.logger.exception("Error while getting client list!")
+            self.logger.exception("Error while getting client list!")
             self.client_list = []
 
     def send_message_to_all_clients(self):
@@ -73,39 +73,39 @@ class PluginTemplate(Thread):
         Sends a "Hello World!" message to every connected client except ServerQuery clients.
         """
         if self.client_list is None:
-            PluginTemplate.logger.debug(
+            self.logger.debug(
                 "client_list is None (empty). Looks like no real client is connected."
             )
             return
 
         for client in self.client_list:
             if "clid" not in client:
-                PluginTemplate.logger.error(
+                self.logger.error(
                     "Error, because the following client has no clid: %s", str(client)
                 )
                 continue
 
             if "client_type" not in client:
-                PluginTemplate.logger.error(
+                self.logger.error(
                     "Error, because the following client has no client_type: %s",
                     str(client),
                 )
                 continue
 
             if int(client["client_type"]) == 1:
-                PluginTemplate.logger.debug(
+                self.logger.debug(
                     "Skipping the following client as it is a ServerQuery client: %s",
                     str(client),
                 )
                 continue
 
             if DRY_RUN:
-                PluginTemplate.logger.info(
+                self.logger.info(
                     "I would have sent a textmessage to this client, when dry-run would be disabled: %s",
                     str(client),
                 )
             else:
-                PluginTemplate.logger.debug(
+                self.logger.debug(
                     "Sending the following client a message: %s", str(client)
                 )
 
@@ -114,9 +114,9 @@ class PluginTemplate(Thread):
                         BOT.ts3conn, client["clid"], "Hello World!"
                     )
                 except AttributeError:
-                    PluginTemplate.logger.exception("AttributeError: %s", str(client))
+                    self.logger.exception("AttributeError: %s", str(client))
                 except TS3Exception:
-                    PluginTemplate.logger.exception(
+                    self.logger.exception(
                         "Error while sending a message to the client: %s", str(client)
                     )
 
@@ -125,26 +125,24 @@ class PluginTemplate(Thread):
         Loop over all main functions with a specific delay between each execution until the stop signal is sent.
         """
         while not self.stopped.wait(float(CHECK_FREQUENCY_SECONDS)):
-            PluginTemplate.logger.debug("Thread running!")
-            PluginTemplate.logger.info("SOME_OPTION value: %s", str(SOME_OPTION))
+            self.logger.debug("Thread running!")
+            self.logger.info("SOME_OPTION value: %s", str(SOME_OPTION))
 
             try:
                 self.update_client_list()
                 self.send_message_to_all_clients()
             except BaseException:
-                PluginTemplate.logger.error(
-                    "Uncaught exception: %s", str(sys.exc_info()[0])
-                )
-                PluginTemplate.logger.error(str(sys.exc_info()[1]))
-                PluginTemplate.logger.error(traceback.format_exc())
+                self.logger.error("Uncaught exception: %s", str(sys.exc_info()[0]))
+                self.logger.error(str(sys.exc_info()[1]))
+                self.logger.error(traceback.format_exc())
 
-        PluginTemplate.logger.warning("Thread stopped!")
+        self.logger.warning("Thread stopped!")
 
     def run(self):
         """
         Thread run method.
         """
-        PluginTemplate.logger.info("Thread started!")
+        self.logger.info("Thread started!")
         try:
             self.loop_until_stopped()
         except BaseException:

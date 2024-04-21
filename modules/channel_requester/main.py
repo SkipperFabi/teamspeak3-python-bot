@@ -76,7 +76,7 @@ class ChannelRequester(Thread):
                 self.ts3conn._send("channelgrouplist")
             )
         except TS3Exception:
-            ChannelRequester.logger.exception(
+            self.logger.exception(
                 "Error while getting the list of available channel groups."
             )
             raise
@@ -84,7 +84,7 @@ class ChannelRequester(Thread):
         channel_group_id = None
         for channel_group in channel_group_list:
             if int(channel_group.get("type")) in (0, 2):
-                ChannelRequester.logger.debug(
+                self.logger.debug(
                     "Ignoring channel group of the type 0 (template) or 2 (query)."
                 )
                 continue
@@ -104,17 +104,13 @@ class ChannelRequester(Thread):
         servergroup_ids_to_ignore = []
 
         if SERVERGROUPS_TO_EXCLUDE is None:
-            ChannelRequester.logger.debug(
-                "No servergroups to exclude defined. Nothing todo."
-            )
+            self.logger.debug("No servergroups to exclude defined. Nothing todo.")
             return servergroup_ids_to_ignore
 
         try:
             servergroup_list = self.ts3conn.servergrouplist()
         except TS3QueryException:
-            ChannelRequester.logger.exception(
-                "Failed to get the list of available servergroups."
-            )
+            self.logger.exception("Failed to get the list of available servergroups.")
 
         for servergroup in servergroup_list:
             if int(servergroup.get("type")) == 0:
@@ -138,7 +134,7 @@ class ChannelRequester(Thread):
         try:
             channel_id = self.ts3conn.channelfind(name)[0].get("cid", "-1")
         except TS3Exception:
-            ChannelRequester.logger.exception(
+            self.logger.exception(
                 "Error while finding a channel with the name `%s`.", str(name)
             )
             raise
@@ -158,7 +154,7 @@ class ChannelRequester(Thread):
             try:
                 channel_alias, channel_setting_name = key.split(".")
             except ValueError:
-                ChannelRequester.logger.exception(
+                self.logger.exception(
                     "Failed to get channel alias and setting name. Please ensure, that your plugin configuration is valid."
                 )
                 raise
@@ -182,7 +178,7 @@ class ChannelRequester(Thread):
                 channel_group_id = None
                 channel_group_id = self.get_channel_group_by_name(value)
                 if channel_group_id is None:
-                    ChannelRequester.logger.error(
+                    self.logger.error(
                         "Could not find any channel group with the name `%s`.",
                         str(value),
                     )
@@ -192,9 +188,7 @@ class ChannelRequester(Thread):
 
         channel_configs.append(deepcopy(channel_properties_dict))
 
-        ChannelRequester.logger.info(
-            "Active channel configurations: %s", str(channel_configs)
-        )
+        self.logger.info("Active channel configurations: %s", str(channel_configs))
 
         return channel_configs
 
@@ -211,7 +205,7 @@ class ChannelRequester(Thread):
                 self.ts3conn._send("servergroupsbyclientid", [f"cldbid={cldbid}"])
             )
         except TS3QueryException:
-            ChannelRequester.logger.exception(
+            self.logger.exception(
                 "Failed to get the list of assigned servergroups for the client cldbid=%s.",
                 int(cldbid),
             )
@@ -220,7 +214,7 @@ class ChannelRequester(Thread):
         for servergroup in client_servergroups:
             client_servergroup_ids.append(servergroup.get("sgid"))
 
-        ChannelRequester.logger.debug(
+        self.logger.debug(
             "client_database_id=%s has these servergroups: %s",
             int(cldbid),
             str(client_servergroup_ids),
@@ -243,7 +237,7 @@ class ChannelRequester(Thread):
         try:
             all_channels = self.ts3conn.channellist()
         except TS3Exception:
-            ChannelRequester.logger.exception("Could not get the current channel list.")
+            self.logger.exception("Could not get the current channel list.")
             raise
 
         for channel in all_channels:
@@ -265,7 +259,7 @@ class ChannelRequester(Thread):
         try:
             all_channels = self.ts3conn.channellist()
         except TS3Exception:
-            ChannelRequester.logger.exception("Could not get the current channel list.")
+            self.logger.exception("Could not get the current channel list.")
             raise
 
         for channel in all_channels:
@@ -281,7 +275,7 @@ class ChannelRequester(Thread):
         try:
             self.ts3conn.clientmove(int(channel_id), int(client.clid))
         except TS3QueryException:
-            ChannelRequester.logger.exception(
+            self.logger.exception(
                 "Failed to move the client into his private channel: %s",
                 str(client),
             )
@@ -292,22 +286,18 @@ class ChannelRequester(Thread):
         Creates a channel and grants a specific client channel admin permissions.
         """
         if client is None:
-            ChannelRequester.logger.debug("No client has been provided. Nothing todo!")
+            self.logger.debug("No client has been provided. Nothing todo!")
             return
 
-        ChannelRequester.logger.debug(
-            "Received an event for this client: %s", str(client)
-        )
+        self.logger.debug("Received an event for this client: %s", str(client))
 
         try:
             client_info = self.ts3conn.clientinfo(client.clid)
         except AttributeError:
-            ChannelRequester.logger.exception(
-                "The client has no clid: %s.", str(client)
-            )
+            self.logger.exception("The client has no clid: %s.", str(client))
             raise
         except TS3Exception:
-            ChannelRequester.logger.exception(
+            self.logger.exception(
                 "Failed to get the client info of clid=%s.", int(client.clid)
             )
             raise
@@ -316,7 +306,7 @@ class ChannelRequester(Thread):
             int(channel_config["main_channel_cid"]) == int(client.target_channel_id)
             for channel_config in self.channel_configs
         ):
-            ChannelRequester.logger.debug(
+            self.logger.debug(
                 "The client did not join any channel, which creates new channels."
             )
             return
@@ -326,7 +316,7 @@ class ChannelRequester(Thread):
                 int(client_info.get("client_database_id"))
             ):
                 if client_servergroup_id in self.servergroup_ids_to_ignore:
-                    ChannelRequester.logger.debug(
+                    self.logger.debug(
                         "The client is in the servergroup sgid=%s, which should be ignored: %s",
                         int(client_servergroup_id),
                         str(client),
@@ -339,7 +329,7 @@ class ChannelRequester(Thread):
                 main_channel_name = channel_config.pop("main_channel_name")
                 main_channel_cid = channel_config.pop("main_channel_cid")
             except KeyError:
-                ChannelRequester.logger.exception(
+                self.logger.exception(
                     "Could not retrieve the required information from the channel configuration."
                 )
                 continue
@@ -352,7 +342,7 @@ class ChannelRequester(Thread):
                 channel_group_id = None
                 channel_group_id = self.get_channel_group_by_name(default_channel_group)
                 if channel_group_id is None:
-                    ChannelRequester.logger.error(
+                    self.logger.error(
                         "Could not find any channel group with the name `%s`.",
                         str(default_channel_group),
                     )
@@ -364,7 +354,7 @@ class ChannelRequester(Thread):
                 channel_settings = channel_config
                 break
 
-        ChannelRequester.logger.info(
+        self.logger.info(
             "client_nickname=%s requested an own channel under the channel `%s`.",
             str(client_info.get("client_nickname")),
             str(main_channel_name),
@@ -374,7 +364,7 @@ class ChannelRequester(Thread):
             str(client_info.get("client_nickname"))
         )
         if existing_user_channel is not None:
-            ChannelRequester.logger.info(
+            self.logger.info(
                 "client_nickname=%s has already an existing channel. Moving the client directly.",
                 str(client_info.get("client_nickname")),
             )
@@ -458,13 +448,13 @@ class ChannelRequester(Thread):
                 channel_permissions.append({f"{key}": value})
 
         if DRY_RUN:
-            ChannelRequester.logger.info(
+            self.logger.info(
                 "I would have created the following channel, when dry-run would be disabled: %s, %s",
                 str(channel_properties),
                 str(channel_permissions),
             )
         else:
-            ChannelRequester.logger.info(
+            self.logger.info(
                 "Creating the following channel: %s",
                 str(channel_properties),
             )
@@ -473,11 +463,11 @@ class ChannelRequester(Thread):
                     self.ts3conn._send("channelcreate", channel_properties)
                 )
             except TS3QueryException:
-                ChannelRequester.logger.exception("Failed to create the channel.")
+                self.logger.exception("Failed to create the channel.")
                 raise
 
             if len(channel_permissions) > 0:
-                ChannelRequester.logger.info(
+                self.logger.info(
                     "Setting the following channel permissions on the channel `%s`: %s",
                     int(recently_created_channel.get("cid")),
                     str(channel_permissions),
@@ -495,7 +485,7 @@ class ChannelRequester(Thread):
                                 ],
                             )
                         except TS3QueryException:
-                            ChannelRequester.logger.exception(
+                            self.logger.exception(
                                 "Failed to set the channel permission `%s` for the cid=%s.",
                                 str(permsid),
                                 int(recently_created_channel.get("cid")),
@@ -514,7 +504,7 @@ class ChannelRequester(Thread):
                     ],
                 )
             except TS3QueryException:
-                ChannelRequester.logger.exception(
+                self.logger.exception(
                     "Failed to grant the client the respective channel group."
                 )
                 raise
@@ -529,9 +519,7 @@ class ChannelRequester(Thread):
                     ],
                 )
             except TS3QueryException:
-                ChannelRequester.logger.exception(
-                    "Failed to make the channel temporary."
-                )
+                self.logger.exception("Failed to make the channel temporary.")
                 raise
 
 

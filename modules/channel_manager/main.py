@@ -74,11 +74,11 @@ class ChannelManager(Thread):
         self.managed_channels = []
         self.managed_channels = self.find_channels_by_prefix()
         if len(self.managed_channels) == 0:
-            ChannelManager.logger.info(
+            self.logger.info(
                 "Seems like as you don't have any existing channels with the respective name patterns."
             )
         else:
-            ChannelManager.logger.info(
+            self.logger.info(
                 "Found the following existing channels, which I will manage: %s",
                 str(self.managed_channels),
             )
@@ -97,7 +97,7 @@ class ChannelManager(Thread):
                 name_prefix = channel_config.pop("name_prefix")
                 minimum = channel_config.pop("minimum", 1)
             except KeyError:
-                ChannelManager.logger.exception(
+                self.logger.exception(
                     "Could not retrieve the name prefix from the channel configuration."
                 )
                 continue
@@ -119,7 +119,7 @@ class ChannelManager(Thread):
             try:
                 channel_alias, channel_setting_name = key.split(".")
             except ValueError:
-                ChannelManager.logger.exception(
+                self.logger.exception(
                     "Failed to get channel alias and setting name. Please ensure, that your plugin configuration is valid."
                 )
                 raise
@@ -136,7 +136,7 @@ class ChannelManager(Thread):
                 try:
                     parent_channel_id = self.get_channel_id_by_name_pattern(value)
                 except TS3Exception:
-                    ChannelManager.logger.exception(
+                    self.logger.exception(
                         "Could not find any channel with the name pattern `%s`.",
                         str(value),
                     )
@@ -147,9 +147,7 @@ class ChannelManager(Thread):
 
         channel_configs.append(deepcopy(channel_properties_dict))
 
-        ChannelManager.logger.info(
-            "Active channel configurations: %s", str(channel_configs)
-        )
+        self.logger.info("Active channel configurations: %s", str(channel_configs))
 
         return channel_configs
 
@@ -163,7 +161,7 @@ class ChannelManager(Thread):
         try:
             all_channels = self.ts3conn.channellist()
         except TS3Exception:
-            ChannelManager.logger.exception("Could not get the current channel list.")
+            self.logger.exception("Could not get the current channel list.")
             raise
 
         managed_channels_list = []
@@ -180,7 +178,7 @@ class ChannelManager(Thread):
             try:
                 name_prefix = channel_config.pop("name_prefix")
             except KeyError:
-                ChannelManager.logger.exception(
+                self.logger.exception(
                     "Could not retrieve the name prefix from the channel configuration."
                 )
                 continue
@@ -204,7 +202,7 @@ class ChannelManager(Thread):
                 self.ts3conn.channelfind(channel_name_pattern)[0].get("cid", "-1")
             )
         except TS3Exception:
-            ChannelManager.logger.exception(
+            self.logger.exception(
                 "Error while finding a channel with the name pattern `%s`.",
                 str(channel_name_pattern),
             )
@@ -218,7 +216,7 @@ class ChannelManager(Thread):
         """
         channel_configs = deepcopy(self.channel_configs)
         for channel_config in channel_configs:
-            ChannelManager.logger.debug(channel_config)
+            self.logger.debug(channel_config)
 
             try:
                 # parent_channel_name is not required here, but needs to be removed from the
@@ -230,7 +228,7 @@ class ChannelManager(Thread):
                 # to avoid an unknown parameter during channel creation.
                 channel_config.pop("minimum", 1)
             except KeyError:
-                ChannelManager.logger.exception(
+                self.logger.exception(
                     "Could not retrieve a required key from the channel configuration."
                 )
                 continue
@@ -243,7 +241,7 @@ class ChannelManager(Thread):
 
             amount_of_channels_to_create = 0
             if channel_minimum_available_count_diff < 0:
-                ChannelManager.logger.info(
+                self.logger.info(
                     "Did not find any channel with the name prefix `%s`.",
                     str(name_prefix),
                 )
@@ -255,14 +253,14 @@ class ChannelManager(Thread):
                     amount_of_channels_with_clients += 1
 
             if amount_of_channels_with_clients == len(existing_channels_with_prefix):
-                ChannelManager.logger.info(
+                self.logger.info(
                     "All existing `%s` channels have clients, but there is no empty one. Creating one.",
                     str(name_prefix),
                 )
                 amount_of_channels_to_create = 1
 
             if amount_of_channels_to_create == 0:
-                ChannelManager.logger.info(
+                self.logger.info(
                     "All necessary `%s` channels exist. Nothing todo.", str(name_prefix)
                 )
                 continue
@@ -306,13 +304,13 @@ class ChannelManager(Thread):
                 i += 1
 
                 if DRY_RUN:
-                    ChannelManager.logger.info(
+                    self.logger.info(
                         "I would have created the following channel, when dry-run would be disabled: %s, %s",
                         str(channel_properties),
                         str(channel_permissions),
                     )
                 else:
-                    ChannelManager.logger.info(
+                    self.logger.info(
                         "Creating the following channel: %s",
                         str(channel_properties),
                     )
@@ -323,19 +321,19 @@ class ChannelManager(Thread):
                     except TS3QueryException as query_exception:
                         # channel name is already in use
                         if query_exception.id == 771:
-                            ChannelManager.logger.debug(
+                            self.logger.debug(
                                 "Channel already exists with this name: %s",
                                 str(channel_properties),
                             )
                             continue
 
-                        ChannelManager.logger.exception(
+                        self.logger.exception(
                             "Error while creating channel: %s", str(channel_properties)
                         )
                         raise
 
                     if len(channel_permissions) > 0:
-                        ChannelManager.logger.info(
+                        self.logger.info(
                             "Setting the following channel permissions on the channel `%s`: %s",
                             int(recently_created_channel.get("cid")),
                             str(channel_permissions),
@@ -353,7 +351,7 @@ class ChannelManager(Thread):
                                         ],
                                     )
                                 except TS3Exception:
-                                    ChannelManager.logger.exception(
+                                    self.logger.exception(
                                         "Failed to set the channel permission `%s` for the cid=%s.",
                                         str(permsid),
                                         int(recently_created_channel.get("cid")),
@@ -381,7 +379,7 @@ class ChannelManager(Thread):
                 # to avoid an unknown parameter during channel creation.
                 channel_config.pop("minimum", 1)
             except KeyError:
-                ChannelManager.logger.exception(
+                self.logger.exception(
                     "Could not retrieve the name prefix from the channel configuration."
                 )
                 continue
@@ -401,7 +399,7 @@ class ChannelManager(Thread):
         except TS3QueryException as query_exception:
             # Error: invalid channel ID (channel ID does not exist (anymore))
             if int(query_exception.id) == 768:
-                ChannelManager.logger.error(
+                self.logger.error(
                     "Failed to get channelinfo as the channel does not exist anymore: %s",
                     int(client_event.target_channel_id),
                 )
@@ -415,12 +413,12 @@ class ChannelManager(Thread):
                 break
 
         if len(affected_channel) == 0:
-            ChannelManager.logger.debug(
+            self.logger.debug(
                 "The client did not join any managed channel. Nothing todo."
             )
             return
 
-        ChannelManager.logger.debug(
+        self.logger.debug(
             "Checking the existing channels for the channel configuration `%s`.",
             str(affected_channel["channel_name_prefix"]),
         )
@@ -429,7 +427,7 @@ class ChannelManager(Thread):
             int(channel["total_clients"]) == 0
             for channel in affected_channel["channels"]
         ):
-            ChannelManager.logger.debug(
+            self.logger.debug(
                 "There exists at least one channel with the prefix `%s`, which has zero clients in it. No further channels required.",
                 str(affected_channel["channel_name_prefix"]),
             )
@@ -445,7 +443,7 @@ class ChannelManager(Thread):
                 ][0]
             )
         except IndexError:
-            ChannelManager.logger.error(
+            self.logger.error(
                 "Could not find any channel configuration with the name prefix '%s'.",
                 str(affected_channel["channel_name_prefix"]),
             )
@@ -461,7 +459,7 @@ class ChannelManager(Thread):
             # to avoid an unknown parameter during channel creation.
             channel_config.pop("minimum", 1)
         except KeyError:
-            ChannelManager.logger.exception(
+            self.logger.exception(
                 "Could not retrieve a required key from the channel configuration."
             )
             raise
@@ -531,13 +529,13 @@ class ChannelManager(Thread):
                 channel_permissions.append({f"{key}": value})
 
         if DRY_RUN:
-            ChannelManager.logger.info(
+            self.logger.info(
                 "I would have created the following channel, when dry-run would be disabled: %s, %s",
                 str(channel_properties),
                 str(channel_permissions),
             )
         else:
-            ChannelManager.logger.info(
+            self.logger.info(
                 "Creating the following channel: %s",
                 str(channel_properties),
             )
@@ -551,19 +549,19 @@ class ChannelManager(Thread):
                 # Usually caused by a race-condition when e.g. multiple clients join at the same time
                 # the same empty channel, which triggers the creation of the next channel creation.
                 if int(query_exception.id) == 771:
-                    ChannelManager.logger.debug(
+                    self.logger.debug(
                         "Failed to create the following channel as it already exists (usually caused by a race-condition): %s",
                         str(channel_properties),
                     )
                     return
 
-                ChannelManager.logger.exception(
+                self.logger.exception(
                     "Error while creating channel: %s", str(channel_properties)
                 )
                 raise
 
             if len(channel_permissions) > 0:
-                ChannelManager.logger.info(
+                self.logger.info(
                     "Setting the following channel permissions on the channel `%s`: %s",
                     int(recently_created_channel.get("cid")),
                     str(channel_permissions),
@@ -581,7 +579,7 @@ class ChannelManager(Thread):
                                 ],
                             )
                         except TS3Exception:
-                            ChannelManager.logger.exception(
+                            self.logger.exception(
                                 "Failed to set the channel permission `%s` for the cid=%s.",
                                 str(permsid),
                                 int(recently_created_channel.get("cid")),
@@ -601,7 +599,7 @@ class ChannelManager(Thread):
             try:
                 name_prefix = channel_config.pop("name_prefix")
             except KeyError:
-                ChannelManager.logger.exception(
+                self.logger.exception(
                     "Could not retrieve the name prefix from the channel configuration."
                 )
                 continue
@@ -621,13 +619,13 @@ class ChannelManager(Thread):
         channel_stats = self.get_channel_stats()
 
         for channel_name_prefix, channels in channel_stats.items():
-            ChannelManager.logger.debug(
+            self.logger.debug(
                 "Checking the existing channels for the channel configuration `%s`.",
                 str(channel_name_prefix),
             )
 
             if len(channels) <= int(self.channel_minimums[channel_name_prefix]):
-                ChannelManager.logger.debug(
+                self.logger.debug(
                     "For the channel configuration `%s` exist only the minimum amount of channels. No further channels will be deleted.",
                     str(channel_name_prefix),
                 )
@@ -639,7 +637,7 @@ class ChannelManager(Thread):
                     empty_channels.append(channel)
 
             if len(empty_channels) <= 1:
-                ChannelManager.logger.debug(
+                self.logger.debug(
                     "At least one empty channel must exist for `%s`, so no channel will be deleted.",
                     str(channel_name_prefix),
                 )
@@ -651,7 +649,7 @@ class ChannelManager(Thread):
                 if len(channel_stats[channel_name_prefix]) <= int(
                     self.channel_minimums[channel_name_prefix]
                 ):
-                    ChannelManager.logger.debug(
+                    self.logger.debug(
                         "For the channel configuration `%s` exist only the minimum amount of channels. No further channels will be deleted.",
                         str(channel_name_prefix),
                     )
@@ -664,12 +662,12 @@ class ChannelManager(Thread):
                     break
 
                 if DRY_RUN:
-                    ChannelManager.logger.info(
+                    self.logger.info(
                         "I would have deleted the following channel, when dry-run would be disabled: %s",
                         str(channel_to_delete),
                     )
                 else:
-                    ChannelManager.logger.info(
+                    self.logger.info(
                         "Deleting the following channel: %s",
                         str(channel_to_delete),
                     )
@@ -684,7 +682,7 @@ class ChannelManager(Thread):
                         if query_exception.id == 768:
                             continue
 
-                        ChannelManager.logger.exception(
+                        self.logger.exception(
                             "Error while deleting channel: %s", str(channel_to_delete)
                         )
                         raise

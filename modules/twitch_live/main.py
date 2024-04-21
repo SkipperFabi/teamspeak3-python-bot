@@ -72,7 +72,7 @@ class TwitchLive(Thread):
         """
         Thread run method. Starts the plugin.
         """
-        TwitchLive.logger.info("Thread started")
+        self.logger.info("Thread started")
         try:
             self.loop_until_stopped()
         except BaseException:
@@ -87,7 +87,7 @@ class TwitchLive(Thread):
         try:
             servergroup_id = self.ts3conn.find_servergroup_by_name(name).get("sgid")
         except TS3Exception:
-            TwitchLive.logger.exception(
+            self.logger.exception(
                 "Error while finding a servergroup with the name `%s`.", str(name)
             )
             raise
@@ -102,12 +102,12 @@ class TwitchLive(Thread):
             self.twitch_api_expires_at is not None
             and (self.twitch_api_expires_at - datetime.now()).total_seconds() > 60 * 5
         ):
-            TwitchLive.logger.debug(
+            self.logger.debug(
                 "The Twitch API OAuth Access Token is still valid. No renewal required."
             )
             return
 
-        TwitchLive.logger.info("Requesting a new Twitch API OAuth Access Token...")
+        self.logger.info("Requesting a new Twitch API OAuth Access Token...")
 
         api_request = request.Request(
             f"https://id.twitch.tv/oauth2/token?client_id={API_CLIENT_ID}&client_secret={API_CLIENT_SECRET}&grant_type=client_credentials",
@@ -122,12 +122,10 @@ class TwitchLive(Thread):
                     seconds=api_response["expires_in"]
                 )
         except error.HTTPError:
-            TwitchLive.logger.exception(
-                "Failed to get a new Twitch API OAuth Access Token."
-            )
+            self.logger.exception("Failed to get a new Twitch API OAuth Access Token.")
             raise
 
-        TwitchLive.logger.info(
+        self.logger.info(
             "Got a new Twitch API OAuth Access Token. Expires at %s.",
             str(self.twitch_api_expires_at),
         )
@@ -142,7 +140,7 @@ class TwitchLive(Thread):
         try:
             for client in self.ts3conn.clientlist():
                 if int(client.get("client_type")) == 1:
-                    TwitchLive.logger.debug(
+                    self.logger.debug(
                         "update_client_list ignoring ServerQuery client: %s",
                         str(client),
                     )
@@ -150,9 +148,9 @@ class TwitchLive(Thread):
 
                 client_list.append(client)
 
-            TwitchLive.logger.debug("client_list: %s", str(client_list))
+            self.logger.debug("client_list: %s", str(client_list))
         except TS3Exception:
-            TwitchLive.logger.exception("Error getting client list!")
+            self.logger.exception("Error getting client list!")
 
         return client_list
 
@@ -171,7 +169,7 @@ class TwitchLive(Thread):
                 )
 
                 if not client_description:
-                    TwitchLive.logger.debug(
+                    self.logger.debug(
                         "The client clid=%s client_nickname=%s has no `client_description`.",
                         int(client.get("clid")),
                         str(client.get("client_nickname")),
@@ -186,9 +184,9 @@ class TwitchLive(Thread):
                     }
                 )
         except TS3Exception:
-            TwitchLive.logger.exception("Error getting client list!")
+            self.logger.exception("Error getting client list!")
 
-        TwitchLive.logger.debug("client_list: %s", str(client_list))
+        self.logger.debug("client_list: %s", str(client_list))
 
         return client_list
 
@@ -198,7 +196,7 @@ class TwitchLive(Thread):
         :param client_description: Twitch Streamer URL or login name
         :return: Twitch Streamer User ID
         """
-        TwitchLive.logger.debug(
+        self.logger.debug(
             "Getting Twitch streamer user ID from `%s`.", str(client_description)
         )
 
@@ -207,13 +205,13 @@ class TwitchLive(Thread):
         twitch_streamer_user_id = None
 
         if re.search(r"\s", twitch_login):
-            TwitchLive.logger.debug(
+            self.logger.debug(
                 "The client description contains at least one whitespace, which is not possible and allowed for Twitch logins: %s",
                 str(twitch_login),
             )
             return twitch_streamer_user_id
 
-        TwitchLive.logger.debug(
+        self.logger.debug(
             "Getting Twitch streamer user ID for `login` `%s`.", str(twitch_login)
         )
 
@@ -231,26 +229,26 @@ class TwitchLive(Thread):
         except error.HTTPError as http_error:
             # HTTP 400: Bad Request
             if int(http_error.code) == 400:
-                TwitchLive.logger.debug(
+                self.logger.debug(
                     "An invalid client description was provided: %s",
                     str(client_description),
                 )
                 return twitch_streamer_user_id
 
-            TwitchLive.logger.exception("Failed to get a Twitch streamer user ID.")
+            self.logger.exception("Failed to get a Twitch streamer user ID.")
             raise
 
         try:
             twitch_streamer_user_id = api_response["data"][0]["id"]
         except IndexError:
-            TwitchLive.logger.error(
+            self.logger.error(
                 "Received an unexpected API response for the client description `%s`: %s",
                 str(client_description),
                 str(api_response),
             )
             return twitch_streamer_user_id
 
-        TwitchLive.logger.debug(
+        self.logger.debug(
             "Got the following Twitch streamer user ID: %s.",
             int(twitch_streamer_user_id),
         )
@@ -270,7 +268,7 @@ class TwitchLive(Thread):
                 self.ts3conn._send("servergroupsbyclientid", [f"cldbid={cldbid}"])
             )
         except TS3QueryException:
-            TwitchLive.logger.exception(
+            self.logger.exception(
                 "Failed to get the list of assigned servergroups for the client cldbid=%s.",
                 int(cldbid),
             )
@@ -279,7 +277,7 @@ class TwitchLive(Thread):
         for servergroup in client_servergroups:
             client_servergroup_ids.append(servergroup.get("sgid"))
 
-        TwitchLive.logger.debug(
+        self.logger.debug(
             "client_database_id=%s has these servergroups: %s",
             int(cldbid),
             str(client_servergroup_ids),
@@ -292,9 +290,7 @@ class TwitchLive(Thread):
         Checks if the Twitch streamer is currently online or offline and assigns or removes the respective servergroup to / from the client.
         :param client: Client information (clid, Twitch user Id)
         """
-        TwitchLive.logger.debug(
-            "Getting online status of Twitch streamer: `%s`", str(client)
-        )
+        self.logger.debug("Getting online status of Twitch streamer: `%s`", str(client))
 
         api_request = request.Request(
             f"https://api.twitch.tv/helix/streams?user_id={client['twitch_user_id']}",
@@ -311,7 +307,7 @@ class TwitchLive(Thread):
             with request.urlopen(api_request) as api_response:
                 api_response = json.load(api_response)
         except error.HTTPError:
-            TwitchLive.logger.exception(
+            self.logger.exception(
                 "Failed to get stream information for Twitch streamer: {str(client)}"
             )
             raise
@@ -327,16 +323,16 @@ class TwitchLive(Thread):
         )
 
         if twitch_stream_online:
-            TwitchLive.logger.debug("Twitch stream is online!")
+            self.logger.debug("Twitch stream is online!")
 
             if self.live_servergroup_id not in client_assigned_servergroup_ids:
                 if DRY_RUN:
-                    TwitchLive.logger.info(
+                    self.logger.info(
                         "Twitch streamer is online. I would have assigned client_database_id=%s the respective servergroup.",
                         int(client["client_database_id"]),
                     )
                 else:
-                    TwitchLive.logger.info(
+                    self.logger.info(
                         "Twitch streamer is online. Assigning client_database_id=%s the respective servergroup.",
                         int(client["client_database_id"]),
                     )
@@ -350,22 +346,22 @@ class TwitchLive(Thread):
                             ],
                         )
                     except TS3Exception:
-                        TwitchLive.logger.exception(
+                        self.logger.exception(
                             "Failed to assign the servergroup to the client_database_id=%s.",
                             int(client["client_database_id"]),
                         )
                         raise
         else:
-            TwitchLive.logger.debug("Twitch stream is offline!")
+            self.logger.debug("Twitch stream is offline!")
 
             if self.live_servergroup_id in client_assigned_servergroup_ids:
                 if DRY_RUN:
-                    TwitchLive.logger.info(
+                    self.logger.info(
                         "Twitch streamer is offline. I would have removed client_database_id=%s from the respective servergroup.",
                         int(client["client_database_id"]),
                     )
                 else:
-                    TwitchLive.logger.info(
+                    self.logger.info(
                         "Twitch streamer is offline. Removing client_database_id=%s from the respective servergroup.",
                         int(client["client_database_id"]),
                     )
@@ -379,7 +375,7 @@ class TwitchLive(Thread):
                             ],
                         )
                     except TS3Exception:
-                        TwitchLive.logger.exception(
+                        self.logger.exception(
                             "Failed to remove the servergroup from the client_database_id=%s.",
                             int(client["client_database_id"]),
                         )
@@ -390,7 +386,7 @@ class TwitchLive(Thread):
         Loop move functions until the stop signal is sent.
         """
         while not self.stopped.wait(float(CHECK_FREQUENCY_SECONDS)):
-            TwitchLive.logger.debug("Thread running!")
+            self.logger.debug("Thread running!")
 
             try:
                 self.get_oauth_access_token()
@@ -400,13 +396,11 @@ class TwitchLive(Thread):
                     )
                     self.manage_live_status(client)
             except BaseException:
-                TwitchLive.logger.error(
-                    "Uncaught exception: %s", str(sys.exc_info()[0])
-                )
-                TwitchLive.logger.error(str(sys.exc_info()[1]))
-                TwitchLive.logger.error(traceback.format_exc())
+                self.logger.error("Uncaught exception: %s", str(sys.exc_info()[0]))
+                self.logger.error(str(sys.exc_info()[1]))
+                self.logger.error(traceback.format_exc())
 
-        TwitchLive.logger.warning("Thread stopped!")
+        self.logger.warning("Thread stopped!")
 
 
 @command(f"{PLUGIN_COMMAND_NAME} version")
