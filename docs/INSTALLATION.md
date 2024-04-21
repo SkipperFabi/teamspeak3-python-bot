@@ -45,6 +45,10 @@ source venv/bin/activate
 ```
 
 ```shell
+pip3 install wheel
+```
+
+```shell
 pip3 install -r requirements.txt
 ```
 
