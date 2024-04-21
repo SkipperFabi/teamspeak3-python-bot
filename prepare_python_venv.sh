@@ -17,6 +17,9 @@ else
     exit 1
 fi
 
+# The `wheel` package needs to be installed before all other dependencies:
+# https://stackoverflow.com/questions/74436681/deprecation-error-wheel-package-is-not-installed
+pip install --quiet wheel
 pip install --quiet -r requirements.txt
 
 if [[ $? -ne 0 ]]; then
