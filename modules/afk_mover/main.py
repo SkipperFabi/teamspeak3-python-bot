@@ -71,7 +71,7 @@ class AfkMover(Thread):
         self.update_servergroup_ids_list()
         self.afk_list = None
         if self.afk_channel is None:
-            AfkMover.logger.error(
+            self.logger.error(
                 "Could not find any channel with the name `%s`.", str(CHANNEL_NAME)
             )
 
@@ -84,7 +84,7 @@ class AfkMover(Thread):
         try:
             channel = self.ts3conn.channelfind(name)[0].get("cid", "-1")
         except TS3Exception:
-            AfkMover.logger.exception(
+            self.logger.exception(
                 "Error while finding a channel with the name `%s`.", str(name)
             )
             raise
@@ -97,12 +97,10 @@ class AfkMover(Thread):
         try:
             self.afk_list = self.ts3conn.clientlist(["away"])
         except TS3Exception:
-            AfkMover.logger.exception(
-                "Error while getting client list with away status!"
-            )
+            self.logger.exception("Error while getting client list with away status!")
             self.afk_list = []
 
-        AfkMover.logger.debug("Awaylist: %s", str(self.afk_list))
+        self.logger.debug("Awaylist: %s", str(self.afk_list))
 
     def get_back_list(self):
         """
@@ -132,13 +130,13 @@ class AfkMover(Thread):
             self.ts3conn.clientmove(self.get_channel_by_name(channel_name), client_id)
             del self.client_channels[str(client_id)]
         except KeyError:
-            AfkMover.logger.error(
+            self.logger.error(
                 "Error moving client! clid=%s not found in %s",
                 int(client_id),
                 str(self.client_channels),
             )
         except TS3Exception:
-            AfkMover.logger.exception("Error moving client! clid=%s", int(client_id))
+            self.logger.exception("Error moving client! clid=%s", int(client_id))
 
     def move_all_back(self):
         """
@@ -146,19 +144,19 @@ class AfkMover(Thread):
         """
         back_list = self.get_back_list()
         if back_list is None:
-            AfkMover.logger.debug("move_all_back back list is empty. Nothing todo.")
+            self.logger.debug("move_all_back back list is empty. Nothing todo.")
             return
 
-        AfkMover.logger.debug("Moving clients back")
-        AfkMover.logger.debug("Backlist is: %s", str(back_list))
-        AfkMover.logger.debug(
+        self.logger.debug("Moving clients back")
+        self.logger.debug("Backlist is: %s", str(back_list))
+        self.logger.debug(
             "Saved channel list keys are: %s\n", str(self.client_channels.keys())
         )
 
         try:
             channel_list = self.ts3conn.channellist()
         except TS3QueryException as query_exception:
-            AfkMover.logger.error(
+            self.logger.error(
                 "Failed to get the current channellist: %s",
                 str(query_exception.message),
             )
@@ -168,15 +166,13 @@ class AfkMover(Thread):
             if client.get("clid", -1) not in self.client_channels:
                 continue
 
-            AfkMover.logger.info(
+            self.logger.info(
                 "Moving the client clid=%s client_nickname=%s back!",
                 int(client.get("clid", -1)),
                 str(client.get("client_nickname", -1)),
             )
-            AfkMover.logger.debug("Client: %s", str(client))
-            AfkMover.logger.debug(
-                "Saved channel list keys: %s", str(self.client_channels)
-            )
+            self.logger.debug("Client: %s", str(client))
+            self.logger.debug("Saved channel list keys: %s", str(self.client_channels))
 
             channel_id = int(self.client_channels.get(client.get("clid", -1)))
             client_id = int(client.get("clid", "-1"))
@@ -188,7 +184,7 @@ class AfkMover(Thread):
             except TS3QueryException as query_exception:
                 # Error: invalid channel ID (channel ID does not exist (anymore))
                 if int(query_exception.id) == 768:
-                    AfkMover.logger.error(
+                    self.logger.error(
                         "Failed to get channelinfo as the channel does not exist anymore: %s",
                         str(client),
                     )
@@ -204,7 +200,7 @@ class AfkMover(Thread):
                 if int(channel_info.get("channel_maxclients")) != -1 and int(
                     channel_details.get("total_clients")
                 ) >= int(channel_info.get("channel_maxclients")):
-                    AfkMover.logger.warning(
+                    self.logger.warning(
                         "Failed to move back the following client as the channel has already the maximum of clients: %s",
                         str(client),
                     )
@@ -212,7 +208,7 @@ class AfkMover(Thread):
                     continue
 
                 if int(channel_info.get("channel_flag_password")):
-                    AfkMover.logger.warning(
+                    self.logger.warning(
                         "Failed to move back the following client as the channel has a password: %s",
                         str(client),
                     )
@@ -226,24 +222,24 @@ class AfkMover(Thread):
             except TS3QueryException as query_exception:
                 # Error: invalid channel ID (channel ID does not exist (anymore))
                 if int(query_exception.id) == 768:
-                    AfkMover.logger.error(
+                    self.logger.error(
                         "Failed to move back the following client as the old channel does not exist anymore: %s",
                         str(client),
                     )
                 # Error: channel maxclient or maxfamily reached
                 if int(query_exception.id) in (777, 778):
-                    AfkMover.logger.error(
+                    self.logger.error(
                         "Failed to move back the following client as the old channel has already the maximum of clients: %s",
                         str(client),
                     )
                 # Error: invalid channel password
                 if int(query_exception.id) == 781:
-                    AfkMover.logger.error(
+                    self.logger.error(
                         "Failed to move back the following client as the old channel has an unknown password: %s",
                         str(client),
                     )
                 else:
-                    AfkMover.logger.exception(
+                    self.logger.exception(
                         "Failed to move back the following client: %s", str(client)
                     )
 
@@ -256,13 +252,13 @@ class AfkMover(Thread):
         channel_ids_to_ignore = []
 
         if CHANNELS_TO_EXCLUDE is None:
-            AfkMover.logger.debug("No channels to exclude defined. Nothing todo.")
+            self.logger.debug("No channels to exclude defined. Nothing todo.")
             return channel_ids_to_ignore
 
         try:
             channel_list = self.ts3conn.channellist()
         except TS3QueryException:
-            AfkMover.logger.exception("Failed to get the list of available channels.")
+            self.logger.exception("Failed to get the list of available channels.")
 
         for channel in channel_list:
             if any(
@@ -280,15 +276,13 @@ class AfkMover(Thread):
         self.servergroup_ids_to_ignore = []
 
         if SERVERGROUPS_TO_EXCLUDE is None:
-            AfkMover.logger.debug("No servergroups to exclude defined. Nothing todo.")
+            self.logger.debug("No servergroups to exclude defined. Nothing todo.")
             return
 
         try:
             servergroup_list = self.ts3conn.servergrouplist()
         except TS3QueryException:
-            AfkMover.logger.exception(
-                "Failed to get the list of available servergroups."
-            )
+            self.logger.exception("Failed to get the list of available servergroups.")
 
         self.servergroup_ids_to_ignore.clear()
         for servergroup in servergroup_list:
@@ -315,7 +309,7 @@ class AfkMover(Thread):
                 self.ts3conn._send("servergroupsbyclientid", [f"cldbid={cldbid}"])
             )
         except TS3QueryException:
-            AfkMover.logger.exception(
+            self.logger.exception(
                 "Failed to get the list of assigned servergroups for the client cldbid=%s.",
                 int(cldbid),
             )
@@ -324,7 +318,7 @@ class AfkMover(Thread):
         for servergroup in client_servergroups:
             client_servergroup_ids.append(servergroup.get("sgid"))
 
-        AfkMover.logger.debug(
+        self.logger.debug(
             "client_database_id=%s has these servergroups: %s",
             int(cldbid),
             str(client_servergroup_ids),
@@ -338,43 +332,43 @@ class AfkMover(Thread):
         :return: List of clients that are set to afk.
         """
         if self.afk_list is None:
-            AfkMover.logger.error("Clientlist is None!")
+            self.logger.error("Clientlist is None!")
             return []
 
-        AfkMover.logger.debug(str(self.afk_list))
+        self.logger.debug(str(self.afk_list))
 
         awaylist = []
         for client in self.afk_list:
-            AfkMover.logger.debug(str(self.afk_list))
+            self.logger.debug(str(self.afk_list))
 
             if client.get("client_type") == "1":
-                AfkMover.logger.debug("Ignoring ServerQuery client: %s", str(client))
+                self.logger.debug("Ignoring ServerQuery client: %s", str(client))
                 continue
 
             if "client_away" not in client.keys():
-                AfkMover.logger.debug(
+                self.logger.debug(
                     "The client has no `client_away` property: %s", str(client)
                 )
                 continue
 
             if client.get("client_away", "0") == "0":
-                AfkMover.logger.debug("The client is not away: %s", str(client))
+                self.logger.debug("The client is not away: %s", str(client))
                 continue
 
             if "cid" not in client.keys():
-                AfkMover.logger.error("Client without cid!")
-                AfkMover.logger.error(str(client))
+                self.logger.error("Client without cid!")
+                self.logger.error(str(client))
                 continue
 
             if int(client.get("cid", "-1")) == int(self.afk_channel):
-                AfkMover.logger.debug(
+                self.logger.debug(
                     "The client is already in the `afk_channel`: %s", str(client)
                 )
                 continue
 
             if CHANNELS_TO_EXCLUDE is not None:
                 if client.get("cid") in self.channel_ids_to_ignore:
-                    AfkMover.logger.debug(
+                    self.logger.debug(
                         "The client is in a channel, which should be ignored: %s",
                         str(client),
                     )
@@ -386,7 +380,7 @@ class AfkMover(Thread):
                     client.get("client_database_id")
                 ):
                     if client_servergroup_id in self.servergroup_ids_to_ignore:
-                        AfkMover.logger.debug(
+                        self.logger.debug(
                             "The client is in the servergroup sgid=%s, which should be ignored: %s",
                             int(client_servergroup_id),
                             str(client),
@@ -407,21 +401,21 @@ class AfkMover(Thread):
         :param client_list: List of clients to move.
         """
         if client_list is None:
-            AfkMover.logger.debug("move_to_afk client list is empty. Nothing todo.")
+            self.logger.debug("move_to_afk client list is empty. Nothing todo.")
             return
 
-        AfkMover.logger.debug("Moving clients to afk!")
+        self.logger.debug("Moving clients to afk!")
 
         for client in client_list:
             if DRY_RUN:
-                AfkMover.logger.info("I would have moved this client: %s", str(client))
+                self.logger.info("I would have moved this client: %s", str(client))
             else:
-                AfkMover.logger.info(
+                self.logger.info(
                     "Moving the client clid=%s client_nickname=%s to afk!",
                     int(client.get("clid", "-1")),
                     str(client.get("client_nickname", "-1")),
                 )
-                AfkMover.logger.debug("Client: %s", str(client))
+                self.logger.debug("Client: %s", str(client))
 
                 try:
                     self.ts3conn.clientmove(
@@ -431,13 +425,11 @@ class AfkMover(Thread):
                         "cid", "0"
                     )
                 except TS3Exception:
-                    AfkMover.logger.exception(
+                    self.logger.exception(
                         "Error moving client! clid=%s", int(client.get("clid", "-1"))
                     )
 
-            AfkMover.logger.debug(
-                "Moved List after move: %s", str(self.client_channels)
-            )
+            self.logger.debug("Moved List after move: %s", str(self.client_channels))
 
     def move_all_afk(self):
         """
@@ -447,35 +439,35 @@ class AfkMover(Thread):
             afk_list = self.get_away_list()
             self.move_to_afk(afk_list)
         except AttributeError:
-            AfkMover.logger.exception("Connection error!")
+            self.logger.exception("Connection error!")
 
     def auto_move_all(self):
         """
         Loop move functions until the stop signal is sent.
         """
         while not self.stopped.wait(float(CHECK_FREQUENCY_SECONDS)):
-            AfkMover.logger.debug("Afkmover running!")
+            self.logger.debug("Afkmover running!")
             try:
                 self.update_afk_list()
                 if ENABLE_AUTO_MOVE_BACK:
                     self.move_all_back()
                 self.move_all_afk()
             except BaseException:
-                AfkMover.logger.error("Uncaught exception: %s", str(sys.exc_info()[0]))
-                AfkMover.logger.error(str(sys.exc_info()[1]))
-                AfkMover.logger.error(traceback.format_exc())
-                AfkMover.logger.error(
+                self.logger.error("Uncaught exception: %s", str(sys.exc_info()[0]))
+                self.logger.error(str(sys.exc_info()[1]))
+                self.logger.error(traceback.format_exc())
+                self.logger.error(
                     "Saved channel list keys are: %s\n",
                     str(self.client_channels.keys()),
                 )
-        AfkMover.logger.warning("AFKMover stopped!")
+        self.logger.warning("AFKMover stopped!")
         self.client_channels = {}
 
     def run(self):
         """
         Thread run method. Starts the mover.
         """
-        AfkMover.logger.info("AFKMove Thread started")
+        self.logger.info("AFKMove Thread started")
         try:
             self.auto_move_all()
         except BaseException:

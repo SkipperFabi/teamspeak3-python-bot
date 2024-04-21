@@ -65,7 +65,7 @@ class InformTeamAboutNewbie(Thread):
         self.newbie_servergroup = None
         self.newbie_servergroup = self.get_servergroup_by_name(NEWBIE_SERVERGROUP_NAME)
         if self.newbie_servergroup is None:
-            InformTeamAboutNewbie.logger.error(
+            self.logger.error(
                 "Could not find any servergroup with the following name: %s",
                 str(NEWBIE_SERVERGROUP_NAME),
             )
@@ -74,7 +74,7 @@ class InformTeamAboutNewbie(Thread):
         if SUPPORT_CHANNEL_NAME is not None:
             self.support_channel = self.get_channel_by_name(SUPPORT_CHANNEL_NAME)
             if self.support_channel is None:
-                InformTeamAboutNewbie.logger.error(
+                self.logger.error(
                     "Could not find any channel with the following name: %s",
                     str(SUPPORT_CHANNEL_NAME),
                 )
@@ -84,7 +84,7 @@ class InformTeamAboutNewbie(Thread):
             try:
                 self.move_delay_seconds = int(MOVE_DELAY_SECONDS)
             except ValueError:
-                InformTeamAboutNewbie.logger.error(
+                self.logger.error(
                     "The given move delay is not a valid number: %s",
                     str(MOVE_DELAY_SECONDS),
                 )
@@ -97,12 +97,12 @@ class InformTeamAboutNewbie(Thread):
                 self.team_servergroups.append(servergroup)
 
         if len(self.team_servergroups) == 0:
-            InformTeamAboutNewbie.logger.error(
+            self.logger.error(
                 "Could not find any team servergroup with the following names: %s",
                 str(TEAM_SERVERGROUP_NAMES),
             )
         else:
-            InformTeamAboutNewbie.logger.info(
+            self.logger.info(
                 "Found the following team servergroups: %s",
                 str(self.team_servergroups),
             )
@@ -119,7 +119,7 @@ class InformTeamAboutNewbie(Thread):
         try:
             servergroups = self.ts3conn.servergrouplist()
         except TS3Exception:
-            InformTeamAboutNewbie.logger.exception(
+            self.logger.exception(
                 "Could not find any servergroup with the following name: %s", str(name)
             )
             raise
@@ -127,9 +127,7 @@ class InformTeamAboutNewbie(Thread):
         servergroup = None
         for group in servergroups:
             if int(group.get("type")) == 0:
-                InformTeamAboutNewbie.logger.debug(
-                    "Ignoring servergroup template: %s", str(group)
-                )
+                self.logger.debug("Ignoring servergroup template: %s", str(group))
                 continue
 
             if group.get("name") == name:
@@ -147,7 +145,7 @@ class InformTeamAboutNewbie(Thread):
         try:
             channel = self.ts3conn.channelfind(name)[0]
         except TS3Exception:
-            InformTeamAboutNewbie.logger.exception(
+            self.logger.exception(
                 "Error while finding a channel with the name `%s`.", str(name)
             )
             raise
@@ -167,7 +165,7 @@ class InformTeamAboutNewbie(Thread):
                 self.ts3conn._send("servergroupsbyclientid", [f"cldbid={cldbid}"])
             )
         except TS3QueryException:
-            InformTeamAboutNewbie.logger.exception(
+            self.logger.exception(
                 "Failed to get the list of assigned servergroups for the client cldbid=%s.",
                 int(cldbid),
             )
@@ -176,7 +174,7 @@ class InformTeamAboutNewbie(Thread):
         for servergroup in client_servergroups:
             client_servergroup_ids.append(servergroup.get("sgid"))
 
-        InformTeamAboutNewbie.logger.debug(
+        self.logger.debug(
             "client_database_id=%s has these servergroups: %s",
             int(cldbid),
             str(client_servergroup_ids),
@@ -190,13 +188,13 @@ class InformTeamAboutNewbie(Thread):
         :params: newbie_client: The client info of the newbie.
         """
         if DRY_RUN:
-            InformTeamAboutNewbie.logger.info(
+            self.logger.info(
                 "If dry-run would be disabled, I would have moved the following client to the supporter channel: client_database_id=%s, client_nickname=%s",
                 int(newbie_client.client_dbid),
                 str(newbie_client.client_name),
             )
         else:
-            InformTeamAboutNewbie.logger.debug(
+            self.logger.debug(
                 "Moving the following client to the supporter channel: client_database_id=%s, client_nickname=%s",
                 int(newbie_client.client_dbid),
                 str(newbie_client.client_name),
@@ -212,14 +210,14 @@ class InformTeamAboutNewbie(Thread):
             except TS3QueryException as query_exception:
                 # invalid clientID
                 if int(query_exception.id) == 512:
-                    InformTeamAboutNewbie.logger.debug(
+                    self.logger.debug(
                         "The newbie client_database_id=%s, client_nickname=%s could not be moved to the supporter channel as he left the server in the meantime.",
                         int(newbie_client.client_dbid),
                         str(newbie_client.client_name),
                     )
                     return
 
-                InformTeamAboutNewbie.logger.exception(
+                self.logger.exception(
                     "Failed to move the client_database_id=%s, client_nickname=%s to the supporter channel.",
                     int(newbie_client.client_dbid),
                     str(newbie_client.client_name),
@@ -244,7 +242,7 @@ class InformTeamAboutNewbie(Thread):
                     )
                 )
             except TS3QueryException:
-                InformTeamAboutNewbie.logger.exception(
+                self.logger.exception(
                     "Failed to get the client list of the servergroup sgid=%s.",
                     int(servergroup.get("sgid")),
                 )
@@ -265,9 +263,7 @@ class InformTeamAboutNewbie(Thread):
         try:
             client_list = self.ts3conn.clientlist()
         except TS3QueryException:
-            InformTeamAboutNewbie.logger.exception(
-                "Failed to get a current list of connected clients."
-            )
+            self.logger.exception("Failed to get a current list of connected clients.")
             raise
 
         team_member_database_id_list = self.get_team_member_list()
@@ -282,7 +278,7 @@ class InformTeamAboutNewbie(Thread):
                 continue
 
             if client.get("client_database_id") not in team_member_database_id_list:
-                InformTeamAboutNewbie.logger.debug(
+                self.logger.debug(
                     "The following client is not member of any team servergroup: %s",
                     str(client),
                 )
@@ -307,13 +303,13 @@ class InformTeamAboutNewbie(Thread):
                 )
 
             if DRY_RUN:
-                InformTeamAboutNewbie.logger.info(
+                self.logger.info(
                     "If dry-run would be disabled, I would have poked the following client about a newbie: client_database_id=%s, client_nickname=%s",
                     int(client.get("client_database_id")),
                     str(client.get("client_nickname")),
                 )
             else:
-                InformTeamAboutNewbie.logger.debug(
+                self.logger.debug(
                     "Poking the following client about a newbie: client_database_id=%s, client_nickname=%s",
                     int(client.get("client_database_id")),
                     str(client.get("client_nickname")),
@@ -322,7 +318,7 @@ class InformTeamAboutNewbie(Thread):
                 try:
                     self.ts3conn.clientpoke(client.get("clid"), str(poke_message))
                 except TS3QueryException:
-                    InformTeamAboutNewbie.logger.exception(
+                    self.logger.exception(
                         "Failed to poke the client_database_id=%s, client_nickname=%s.",
                         int(client.get("client_database_id")),
                         str(client.get("client_nickname")),
@@ -340,13 +336,13 @@ class InformTeamAboutNewbie(Thread):
             poke_message = poke_message.replace("%u", str(newbie_client.client_name))
 
         if DRY_RUN:
-            InformTeamAboutNewbie.logger.info(
+            self.logger.info(
                 "If dry-run would be disabled, I would have poked the following newbie, that the team is informed: client_database_id=%s, client_nickname=%s",
                 int(newbie_client.client_dbid),
                 str(newbie_client.client_name),
             )
         else:
-            InformTeamAboutNewbie.logger.info(
+            self.logger.info(
                 "Poking the following newbie, that the team is informed: client_database_id=%s, client_nickname=%s",
                 int(newbie_client.client_dbid),
                 str(newbie_client.client_name),
@@ -355,7 +351,7 @@ class InformTeamAboutNewbie(Thread):
             try:
                 self.ts3conn.clientpoke(newbie_client.client_id, str(poke_message))
             except TS3QueryException:
-                InformTeamAboutNewbie.logger.exception(
+                self.logger.exception(
                     "Failed to poke the newbie: client_database_id=%s, client_nickname=%s",
                     int(newbie_client.client_dbid),
                     str(newbie_client.client_name),
@@ -368,13 +364,11 @@ class InformTeamAboutNewbie(Thread):
         :params: client: The `ClientEnteredEvent` event data for the joined client.
         """
         if client is None:
-            InformTeamAboutNewbie.logger.debug(
-                "No client has been provided. Nothing todo!"
-            )
+            self.logger.debug("No client has been provided. Nothing todo!")
             return
 
         if client.client_uid == "ServerQuery":
-            InformTeamAboutNewbie.logger.debug(
+            self.logger.debug(
                 "The client client_name=%s, client_database_id=%s is a ServerQuery. Ignoring.",
                 int(client.client_name),
                 int(client.client_dbid),
@@ -384,7 +378,7 @@ class InformTeamAboutNewbie(Thread):
         client_servergroup_ids = self.get_servergroups_by_client(client.client_dbid)
 
         if self.newbie_servergroup.get("sgid") not in client_servergroup_ids:
-            InformTeamAboutNewbie.logger.debug(
+            self.logger.debug(
                 "The client client_database_id=%s is not member of the sgid=%s (%s)",
                 int(client.client_dbid),
                 int(self.newbie_servergroup.get("sgid")),
@@ -392,7 +386,7 @@ class InformTeamAboutNewbie(Thread):
             )
             return
 
-        InformTeamAboutNewbie.logger.info(
+        self.logger.info(
             "The following newbie joined the server: client_database_id=%s, client_uid=%s, client_name=%s",
             int(client.client_dbid),
             str(client.client_uid),

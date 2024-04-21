@@ -66,7 +66,7 @@ class SwitchSupporterChannelStatus(Thread):
         self.supporter_channel_id = None
         self.supporter_channel_id = self.get_channel_by_name(SUPPORTER_CHANNEL_NAME)
         if self.supporter_channel_id is None:
-            SwitchSupporterChannelStatus.logger.error(
+            self.logger.error(
                 "Could not find any channel with the name `%s`.",
                 str(SUPPORTER_CHANNEL_NAME),
             )
@@ -79,7 +79,7 @@ class SwitchSupporterChannelStatus(Thread):
                         int(self.get_channel_by_name(channel_name))
                     )
                 except TS3Exception:
-                    SwitchSupporterChannelStatus.logger.error(
+                    self.logger.error(
                         "Could not find any channel with the name `%s`.",
                         str(channel_name),
                     )
@@ -87,14 +87,14 @@ class SwitchSupporterChannelStatus(Thread):
         self.servergroup_ids_to_check = None
         self.servergroup_ids_to_check = self.update_servergroup_ids_to_check()
         if self.servergroup_ids_to_check is None:
-            SwitchSupporterChannelStatus.logger.error(
+            self.logger.error(
                 "Could not find any servergroups to check for online clients."
             )
 
         self.client_database_ids_to_check = None
         self.client_database_ids_to_check = self.update_servergroup_member_list()
         if self.client_database_ids_to_check is None:
-            SwitchSupporterChannelStatus.logger.error(
+            self.logger.error(
                 "Seems like as your specified servergroups are empty. Could not find any members of these groups."
             )
 
@@ -113,7 +113,7 @@ class SwitchSupporterChannelStatus(Thread):
         try:
             channel_id = self.ts3conn.channelfind(name)[0].get("cid", "-1")
         except TS3Exception:
-            SwitchSupporterChannelStatus.logger.exception(
+            self.logger.exception(
                 "Error while finding a channel with the name `%s`.", str(name)
             )
             raise
@@ -127,17 +127,13 @@ class SwitchSupporterChannelStatus(Thread):
         """
         servergroup_ids = []
         if SERVERGROUPS_TO_CHECK is None:
-            SwitchSupporterChannelStatus.logger.error(
-                "No servergroups to check were defined."
-            )
+            self.logger.error("No servergroups to check were defined.")
             raise ValueError
 
         try:
             servergroup_list = self.ts3conn.servergrouplist()
         except TS3QueryException:
-            SwitchSupporterChannelStatus.logger.exception(
-                "Failed to get the list of available servergroups."
-            )
+            self.logger.exception("Failed to get the list of available servergroups.")
 
         for servergroup in servergroup_list:
             if int(servergroup.get("type")) == 0:
@@ -169,7 +165,7 @@ class SwitchSupporterChannelStatus(Thread):
                     )
                 )
         except TS3QueryException:
-            SwitchSupporterChannelStatus.logger.exception(
+            self.logger.exception(
                 "Failed to get the client list of the servergroup sgid=%s.",
                 int(servergroup_id),
             )
@@ -189,9 +185,7 @@ class SwitchSupporterChannelStatus(Thread):
         try:
             client_list = self.ts3conn.clientlist()
         except TS3QueryException:
-            SwitchSupporterChannelStatus.logger.exception(
-                "Failed to get the client list."
-            )
+            self.logger.exception("Failed to get the client list.")
             raise
 
         for connected_client in client_list:
@@ -207,13 +201,11 @@ class SwitchSupporterChannelStatus(Thread):
         try:
             client_info = self.ts3conn.clientinfo(int(client_id))
         except TS3QueryException:
-            SwitchSupporterChannelStatus.logger.exception(
-                "Failed to get the client list."
-            )
+            self.logger.exception("Failed to get the client list.")
             raise
 
         if int(client_info.get("client_type")) == 1:
-            SwitchSupporterChannelStatus.logger.debug(
+            self.logger.debug(
                 "Ignoring ServerQuery client: client_database_id=%s, client_nickname=%s",
                 client_info.get("client_database_id"),
                 client_info.get("client_nickname"),
@@ -227,7 +219,7 @@ class SwitchSupporterChannelStatus(Thread):
             if int(client_id) in self.available_supporter_clients:
                 self.available_supporter_clients.remove(int(client_id))
 
-            SwitchSupporterChannelStatus.logger.debug(
+            self.logger.debug(
                 "Skipping client, which is not member of any servergroup, which I should check: client_database_id=%s, client_nickname=%s",
                 client_info.get("client_database_id"),
                 client_info.get("client_nickname"),
@@ -253,7 +245,7 @@ class SwitchSupporterChannelStatus(Thread):
                 )
             )[0]
         except TS3Exception:
-            SwitchSupporterChannelStatus.logger.exception(
+            self.logger.exception(
                 "Failed to get the channel information of the cid=%s.",
                 int(self.supporter_channel_id),
             )
@@ -279,34 +271,30 @@ class SwitchSupporterChannelStatus(Thread):
             re.search(r"\[OPEN\]", channel_info.get("channel_name"))
             and switch_channel_action == "open"
         ):
-            SwitchSupporterChannelStatus.logger.debug(
-                "Channel is already open. Nothing todo."
-            )
+            self.logger.debug("Channel is already open. Nothing todo.")
             return
 
         if (
             re.search(r"\[CLOSED\]", channel_info.get("channel_name"))
             and switch_channel_action == "close"
         ):
-            SwitchSupporterChannelStatus.logger.debug(
-                "Channel is already closed. Nothing todo."
-            )
+            self.logger.debug("Channel is already closed. Nothing todo.")
             return
 
-        SwitchSupporterChannelStatus.logger.info(
+        self.logger.info(
             "Currently available supporters (client_database_ids): %s",
             str(self.available_supporter_clients),
         )
 
         if DRY_RUN:
-            SwitchSupporterChannelStatus.logger.info(
+            self.logger.info(
                 "If the dry-run would be disabled, I would have executed the following action to the supporter channel `%s`: %s (New channel properties: %s)",
                 original_channel_name,
                 switch_channel_action,
                 str(channel_properties),
             )
         else:
-            SwitchSupporterChannelStatus.logger.info(
+            self.logger.info(
                 "Executing the following action to the supporter channel `%s`: %s",
                 original_channel_name,
                 switch_channel_action,
@@ -320,12 +308,12 @@ class SwitchSupporterChannelStatus(Thread):
             except TS3QueryException as query_exception:
                 # Error: channel name already in use
                 if int(query_exception.id) == 771:
-                    SwitchSupporterChannelStatus.logger.debug(
+                    self.logger.debug(
                         "The supporter channel has already the expected named."
                     )
                     return
 
-                SwitchSupporterChannelStatus.logger.exception(
+                self.logger.exception(
                     "Failed to %s the channel.", switch_channel_action
                 )
                 raise

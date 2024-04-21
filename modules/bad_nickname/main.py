@@ -94,7 +94,7 @@ class BadNickname(Thread):
             try:
                 bad_name_pattern_alias, bade_name_pattern_option = key.split(".")
             except ValueError:
-                BadNickname.logger.exception(
+                self.logger.exception(
                     "Failed to get bad name pattern alias and option name. Please ensure, that your plugin configuration is valid."
                 )
                 raise
@@ -121,15 +121,13 @@ class BadNickname(Thread):
             )
 
             if bad_name_pattern_dict["regex_object"] is None:
-                BadNickname.logger.error(
+                self.logger.error(
                     "Could not compile your given regex: `%s`.", str(bad_name_pattern)
                 )
 
         bad_name_patterns_list.append(deepcopy(bad_name_pattern_dict))
 
-        BadNickname.logger.info(
-            "Active bad name patterns: %s", str(bad_name_patterns_list)
-        )
+        self.logger.info("Active bad name patterns: %s", str(bad_name_patterns_list))
 
         return bad_name_patterns_list
 

@@ -70,7 +70,7 @@ class PokeClientOnChannelJoin(Thread):
         try:
             channel_id = self.ts3conn.channelfind(name)[0].get("cid", "-1")
         except TS3Exception:
-            PokeClientOnChannelJoin.logger.exception(
+            self.logger.exception(
                 "Error while finding a channel with the name `%s`.", str(name)
             )
             raise
@@ -91,7 +91,7 @@ class PokeClientOnChannelJoin(Thread):
             try:
                 channel_alias, channel_setting_name = key.split(".")
             except ValueError:
-                PokeClientOnChannelJoin.logger.exception(
+                self.logger.exception(
                     "Failed to get channel alias and setting name. Please ensure, that your plugin configuration is valid."
                 )
                 raise
@@ -117,9 +117,7 @@ class PokeClientOnChannelJoin(Thread):
 
         channel_configs.append(deepcopy(channel_properties_dict))
 
-        PokeClientOnChannelJoin.logger.info(
-            "Active channel configurations: %s", str(channel_configs)
-        )
+        self.logger.info("Active channel configurations: %s", str(channel_configs))
 
         return channel_configs
 
@@ -138,7 +136,7 @@ class PokeClientOnChannelJoin(Thread):
                 )
             )
         except TS3QueryException:
-            PokeClientOnChannelJoin.logger.exception(
+            self.logger.exception(
                 "Failed to get the servergroup list.",
             )
             raise
@@ -152,7 +150,7 @@ class PokeClientOnChannelJoin(Thread):
             break
 
         if servergroup_id is None:
-            PokeClientOnChannelJoin.logger.error(
+            self.logger.error(
                 "Could not find any servergroup with the name '%s'.",
                 str(servergroup_name),
             )
@@ -168,7 +166,7 @@ class PokeClientOnChannelJoin(Thread):
                 )
             )
         except TS3QueryException:
-            PokeClientOnChannelJoin.logger.exception(
+            self.logger.exception(
                 "Failed to get the client list of the servergroup sgid=%s.",
                 int(servergroup_id),
             )
@@ -189,14 +187,14 @@ class PokeClientOnChannelJoin(Thread):
         :param: poke_message: The message, which should be sent as poke.
         """
         if DRY_RUN:
-            PokeClientOnChannelJoin.logger.info(
+            self.logger.info(
                 "If dry-run would be disabled, I would have poked the following client: client_database_id=%s, client_nickname=%s, poke_message=%s",
                 int(client_info.get("client_database_id")),
                 str(client_info.get("client_nickname")),
                 str(poke_message),
             )
         else:
-            PokeClientOnChannelJoin.logger.debug(
+            self.logger.debug(
                 "Poking the following client: client_database_id=%s, client_nickname=%s, poke_message=%s",
                 int(client_info.get("client_database_id")),
                 str(client_info.get("client_nickname")),
@@ -206,7 +204,7 @@ class PokeClientOnChannelJoin(Thread):
             try:
                 self.ts3conn.clientpoke(int(client_id), str(poke_message))
             except TS3QueryException:
-                PokeClientOnChannelJoin.logger.exception(
+                self.logger.exception(
                     "Failed to poke the client_database_id=%s, client_nickname=%s with the message '%s'.",
                     int(client_info.get("client_database_id")),
                     str(client_info.get("client_nickname")),
@@ -223,7 +221,7 @@ class PokeClientOnChannelJoin(Thread):
         try:
             team_poke_message = channel_config["team_poke_message"]
         except KeyError:
-            PokeClientOnChannelJoin.logger.debug(
+            self.logger.debug(
                 "No team poke message has been defined in the config. Nothing todo!"
             )
             return
@@ -231,7 +229,7 @@ class PokeClientOnChannelJoin(Thread):
         try:
             client_list = self.ts3conn.clientlist()
         except TS3Exception:
-            PokeClientOnChannelJoin.logger.exception(
+            self.logger.exception(
                 "Failed to get the list of currently connected clients.",
             )
             raise
@@ -249,7 +247,7 @@ class PokeClientOnChannelJoin(Thread):
                 connected_client.get("client_database_id")
                 not in channel_config["team_client_database_ids"]
             ):
-                PokeClientOnChannelJoin.logger.debug(
+                self.logger.debug(
                     "The following client is not member of any servergroup: %s",
                     str(connected_client),
                 )
@@ -267,7 +265,7 @@ class PokeClientOnChannelJoin(Thread):
                 try:
                     client_info = self.ts3conn.clientinfo(int(servergroup_client_id))
                 except TS3Exception:
-                    PokeClientOnChannelJoin.logger.exception(
+                    self.logger.exception(
                         "Failed to get the client info of clid=%s.",
                         int(servergroup_client_id),
                     )
@@ -295,7 +293,7 @@ class PokeClientOnChannelJoin(Thread):
         try:
             user_poke_message = channel_config["user_poke_message"]
         except KeyError:
-            PokeClientOnChannelJoin.logger.debug(
+            self.logger.debug(
                 "No user poke message has been defined in the config. Nothing todo!"
             )
             return
@@ -315,14 +313,10 @@ class PokeClientOnChannelJoin(Thread):
         :param: client: The event data of the client, which joined a channel.
         """
         if client is None:
-            PokeClientOnChannelJoin.logger.debug(
-                "No client has been provided. Nothing todo!"
-            )
+            self.logger.debug("No client has been provided. Nothing todo!")
             return
 
-        PokeClientOnChannelJoin.logger.debug(
-            "Received an event for this client: %s", str(client)
-        )
+        self.logger.debug("Received an event for this client: %s", str(client))
 
         channel_config = None
         for config in self.channel_configs:
@@ -331,7 +325,7 @@ class PokeClientOnChannelJoin(Thread):
                 break
 
         if channel_config is None:
-            PokeClientOnChannelJoin.logger.debug(
+            self.logger.debug(
                 "The client did not join any channel, which should poke clients."
             )
             return
@@ -346,12 +340,10 @@ class PokeClientOnChannelJoin(Thread):
         try:
             client_info = self.ts3conn.clientinfo(client.clid)
         except AttributeError:
-            PokeClientOnChannelJoin.logger.exception(
-                "The client has no clid: %s.", str(client)
-            )
+            self.logger.exception("The client has no clid: %s.", str(client))
             raise
         except TS3Exception:
-            PokeClientOnChannelJoin.logger.exception(
+            self.logger.exception(
                 "Failed to get the client info of clid=%s.", int(client.clid)
             )
             raise
