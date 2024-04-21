@@ -238,6 +238,13 @@ class PokeClientOnChannelJoin(Thread):
 
         servergroup_client_ids_to_poke = []
         for connected_client in client_list:
+            if int(connected_client.get("client_type")) == 1:
+                self.logger.debug(
+                    "update_client_list ignoring ServerQuery client: %s",
+                    str(connected_client),
+                )
+                continue
+
             if (
                 connected_client.get("client_database_id")
                 not in channel_config["team_client_database_ids"]

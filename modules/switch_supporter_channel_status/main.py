@@ -140,6 +140,13 @@ class SwitchSupporterChannelStatus(Thread):
             )
 
         for servergroup in servergroup_list:
+            if int(servergroup.get("type")) == 0:
+                self.logger.debug(
+                    "Ignoring servergroup template sgid=%s.",
+                    int(servergroup.get("sgid")),
+                )
+                continue
+
             if servergroup.get("name") in SERVERGROUPS_TO_CHECK.split(","):
                 servergroup_ids.append(servergroup.get("sgid"))
 
