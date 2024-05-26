@@ -24,7 +24,7 @@ This section contains general settings for the Bot:
 
 ### Using SSH (Encrypted ServerQuery connection)
 
-Since the TeamSpeak server version 3.3 TeamSpeak supports encrypted ServerQuery clients. It's recommend to use SSH.
+Since the TeamSpeak server version 3.3 TeamSpeak supports encrypted ServerQuery clients. It's recommended to use SSH.
 
 To archive this the connection is wrapped inside a SSH connection. As SSH needs a way to check the host RSA
 key, four config options were added:
