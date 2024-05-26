@@ -14,7 +14,6 @@ main.sh
 .ssh/*
 .vim/
 .vscode/
-config.ini
 .idea/
 tags
 test.py
